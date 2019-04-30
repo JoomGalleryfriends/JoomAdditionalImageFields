@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension version="3.0" type="plugin" group="joomgallery" method="upgrade">
+  <name>PLG_JOOMGALLERY_JOOMADDITIONALIMAGEFIELDS</name>
+  <author>JoomlaGallery::ProjektTeam</author>
+  <creationDate>2019/04/04</creationDate>
+  <copyright>(C) 2012 - 2019 Open Source Matters. All rights reserved.</copyright>
+  <license>GNU General Public License version 2 or later; see LICENSE.txt</license>
+  <authorUrl>www.joomgalleryyfriends.net</authorUrl>
+  <version>3.1.1</version>
+  <description>PLG_JOOMGALLERY_JOOMADDITIONALIMAGEFIELDS_XML_DESCRIPTION</description>
+  <files>
+    <filename plugin="joomadditionalimagefields">joomadditionalimagefields.php</filename>
+    <filename>index.html</filename>
+    <folder>additionalfields</folder>
+  </files>
+  <languages folder="language">
+    <language tag="de-DE">de-DE/de-DE.plg_joomgallery_joomadditionalimagefields.ini</language>
+    <language tag="de-DE">de-DE/de-DE.plg_joomgallery_joomadditionalimagefields.sys.ini</language>
+    <language tag="en-GB">en-GB/en-GB.plg_joomgallery_joomadditionalimagefields.ini</language>
+    <language tag="en-GB">en-GB/en-GB.plg_joomgallery_joomadditionalimagefields.sys.ini</language>
+    <language tag="fr-FR">fr-FR/fr-FR.plg_joomgallery_joomadditionalimagefields.ini</language>
+    <language tag="fr-FR">fr-FR/fr-FR.plg_joomgallery_joomadditionalimagefields.sys.ini</language>
+  </languages>
+  <config>
+    <fields name="params">
+      <fieldset name="basic">
+        <field name="display_after_thumb" type="radio" default="1" label="PLG_JOOMGALLERY_JOOMADDITIONALIMAGEFIELDS_DISPLAY_AFTER_THUMB_LABEL" description="PLG_JOOMGALLERY_JOOMADDITIONALIMAGEFIELDS_DISPLAY_AFTER_THUMB_DESC">
+          <option value="0">JNO</option>
+          <option value="1">JYES</option>
+        </field>
+        <field name="display_after_detailimage" type="radio" default="1" label="PLG_JOOMGALLERY_JOOMADDITIONALIMAGEFIELDS_DISPLAY_AFTER_DETAILIMAGE_LABEL" description="PLG_JOOMGALLERY_JOOMADDITIONALIMAGEFIELDS_DISPLAY_AFTER_DETAILIMAGE_DESC">
+          <option value="0">JNO</option>
+          <option value="1">JYES</option>
+        </field>
+      </fieldset>
+    </fields>
+  </config>
+  <updateservers>
+    <server type="collection" priority="1" name="JoomGallery Update Service">https://www.joomgalleryfriends.net/components/com_newversion/xml/extensions3.xml</server>
+  </updateservers>
+</extension>

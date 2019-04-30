@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<form>
+  <fields name="additional">
+    <fieldset name="additional"
+      label="PLG_JOOMGALLERY_JOOMADDITIONALIMAGEFIELDS_LABEL"
+    >
+      <field
+        name="price"
+        type="Text"
+        default=""
+        label="Price"
+        description="Please enter the cost of this image" />
+
+      <field
+        name="additional_description"
+        type="textarea"
+        rows="6"
+        cols="25"
+        default=""
+        label="Additional Description"
+        description="Additional  description to display" />
+
+      <field
+        name="example_field"
+        type="list"
+        default="Example option 0"
+        label="Example"
+        description="Example dropdown field">
+        <option value="Example option 0">Example option 0</option>
+        <option value="Example option 1">Example option 1</option>
+        <option value="Example option 2">Example option 2</option>
+      </field>
+
+      <field
+        name="screensaver"
+        type="radio"
+        default="Yes"
+        label="Available as Screensaver"
+        description="Please select whether this image is available as a screensaver.">
+        <option value="No">No</option>
+        <option value="Yes">Yes</option>
+      </field>
+    </fieldset>
+  </fields>
+</form>
