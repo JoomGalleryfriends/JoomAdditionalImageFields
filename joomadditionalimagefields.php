@@ -117,7 +117,7 @@ class plgJoomGalleryJoomAdditionalImageFields extends JPlugin
 
     // Check we are manipulating a valid form
     $name = $form->getName();
-    if(!in_array($name, array(_JOOM_OPTION.'.image', _JOOM_OPTION.'.edit')))
+    if(!in_array($name, array(_JOOM_OPTION.'.image', _JOOM_OPTION.'.edit', _JOOM_OPTION.'.editimages')))
     {
       return true;
     }
@@ -141,45 +141,70 @@ class plgJoomGalleryJoomAdditionalImageFields extends JPlugin
   public function onContentPrepareData($context, $data)
   {
     // Check if we are manipulating a valid form
-    if(!in_array($context, array(_JOOM_OPTION.'.image', _JOOM_OPTION.'.edit')))
+    if(!in_array($context, array(_JOOM_OPTION.'.image', _JOOM_OPTION.'.edit', _JOOM_OPTION.'.image.batch')))
     {
       return;
     }
 
-    if(is_object($data) && !isset($data->additional) && isset($data->id) && $data->id)
+    if(!is_array($data))
     {
-      // Load the profile data from the database.
-      $db = JFactory::getDbo();
-      $query = $db->getQuery(true)
-            ->select('details_key, details_value')
-            ->from(_JOOM_TABLE_IMAGE_DETAILS)
-            ->where('id = '.(int) $data->id)
-            ->where('details_key LIKE '.$db->q('additional.%'))
-            ->order('ordering');
-      $db->setQuery($query);
-      $results = $db->loadRowList();
+      // single image form
+      $datas = array($data);
+    }
+    else
+    {
+      // batch image form
+      $datas = $data;
+    }
 
-      // Check for a database error.
-      if($db->getErrorNum())
+    foreach($datas as $data)
+    {
+      if(is_object($data) && !isset($data->additional) && isset($data->id) && $data->id)
       {
-        $this->_subject->setError($db->getErrorMsg());
+        // Load the profile data from the database.
+        $db = JFactory::getDbo();
+        $query = $db->getQuery(true)
+              ->select('details_key, details_value')
+              ->from(_JOOM_TABLE_IMAGE_DETAILS)
+              ->where('id = '.(int) $data->id)
+              ->where('details_key LIKE '.$db->q('additional.%'))
+              ->order('ordering');
+        $db->setQuery($query);
+        $results = $db->loadRowList();
 
-        return;
-      }
-
-      // Merge the profile data
-      $data->additional = array();
-
-      JForm::addFormPath(dirname(__FILE__).'/additionalfields');
-      $form = JForm::getInstance('plg_joomadditionalimagefields.form', 'additional');
-      foreach($results as $v)
-      {
-        $k = str_replace('additional.', '', $v[0]);
-        if($form->getField($k, 'additional'))
+        // Check for a database error.
+        if($db->getErrorNum())
         {
-          $data->additional[$k] = $v[1];
+          $this->_subject->setError($db->getErrorMsg());
+
+          return;
+        }
+
+        // Merge the profile data
+        $data->additional = array();
+
+        JForm::addFormPath(dirname(__FILE__).'/additionalfields');
+        $form = JForm::getInstance('plg_joomadditionalimagefields.form', 'additional');
+        foreach($results as $v)
+        {
+          $k = str_replace('additional.', '', $v[0]);
+          if($form->getField($k, 'additional'))
+          {
+            $data->additional[$k] = $v[1];
+          }
         }
       }
+    }
+
+    if(count($datas) == 1)
+    {
+      // single image form
+      $data = $datas[0];
+    }
+    else
+    {
+      // batch image form
+      $data = $datas;
     }
   }
 
@@ -195,13 +220,27 @@ class plgJoomGalleryJoomAdditionalImageFields extends JPlugin
    */
   public function onContentAfterSave($context, &$table, $isNew)
   {
-    if(!isset($table->id) || !$table->id || $context != _JOOM_OPTION.'.image')
+    if(!isset($table->id) || !$table->id || !in_array($context, array(_JOOM_OPTION.'.image', _JOOM_OPTION.'.image.batch')))
     {
       return;
     }
 
     try
     {
+      if($context == _JOOM_OPTION.'.image.batch')
+      {
+        // get old data
+        $db = JFactory::getDBO();
+        $query = $db->getQuery(true)
+              ->select($db->quoteName(array('details_key', 'details_value')))
+              ->from($db->quoteName(_JOOM_TABLE_IMAGE_DETAILS))
+              ->where($db->quoteName('id') . ' = ' . $db->quote($table->id))
+              ->where('details_key LIKE '.$db->q('additional.%'))
+              ->order('ordering ASC');
+        $db->setQuery($query);
+        $old_data = $db->loadAssocList('details_key');
+      }
+
       $db = JFactory::getDbo();
       $query = $db->getQuery(true)
             ->delete(_JOOM_TABLE_IMAGE_DETAILS)
@@ -218,6 +257,21 @@ class plgJoomGalleryJoomAdditionalImageFields extends JPlugin
       $order  = 1;
 
       $data = JRequest::getVar('additional', array(), 'post', 'array');
+
+      if($context == _JOOM_OPTION.'.image.batch')
+      {
+        // filter the requested data (save only changed data sets)
+        $change = JRequest::getVar('change', array(), 'post', 'array');
+
+        foreach ($data as $k => $v)
+        {
+          if(!in_array($k,$change))
+          {
+            $data[$k] = $old_data['additional.'.$k]['details_value'];
+          }
+        }
+      }
+
       JForm::addFormPath(dirname(__FILE__).'/additionalfields');
       $form = JForm::getInstance('plg_joomadditionalimagefields.form', 'additional');
       foreach($data as $k => $v)
@@ -228,6 +282,91 @@ class plgJoomGalleryJoomAdditionalImageFields extends JPlugin
         }
       }
 
+      if(count($tuples))
+      {
+        $query->clear()
+              ->insert(_JOOM_TABLE_IMAGE_DETAILS)
+              ->values($tuples);
+        $db->setQuery($query);
+
+        if(!$db->query())
+        {
+          throw new Exception($db->getErrorMsg());
+        }
+      }
+    }
+    catch(Exception $e)
+    {
+      $this->_subject->setError($e->getMessage());
+
+      return;
+    }
+  }
+
+  /**
+   * onJoomAfterSearchReplace event
+   * Method is called after a batch search&replace was performed on an images data
+   *
+   * @param   string  $id           image id
+   * @param   string  $searchVal    The value to be searched for
+   * @param   string  $replaceVal   Value that will replace the searched value
+   * @param   integer $tmp_rep      Number of performed replacements (need to be modified in this method)
+   * @return  void
+   * @since   3.2
+   */
+  public function onJoomAfterSearchReplace($id, $searchVal, $replaceVal, $fields, &$tmp_rep)
+  {
+    if(!in_array('additional', $fields))
+    {
+      return;
+    }
+
+    try
+    {
+      // get current additional data
+      $db = JFactory::getDBO();
+      $query = $db->getQuery(true)
+            ->select($db->quoteName(array('details_key', 'details_value')))
+            ->from($db->quoteName(_JOOM_TABLE_IMAGE_DETAILS))
+            ->where($db->quoteName('id') . ' = ' . $db->quote($id))
+            ->where('details_key LIKE '.$db->q('additional.%'))
+            ->order('ordering ASC');
+      $db->setQuery($query);
+      $datalist = $db->loadAssocList('details_key');
+
+      if(!$db->query())
+      {
+        throw new Exception($db->getErrorMsg());
+      }
+
+      $tuples = array();
+      $order  = 1;
+
+      foreach ($datalist as $key => $data)
+      {
+        $replacements = 0;
+
+        // Replace image informations
+        $value = str_replace($searchVal,$replaceVal,$data['details_value'],$replacements);
+        $tuples[] = (int) $id.','.$db->q($key).','.$db->q($value).','.$order++;
+
+        // count replacements
+        $tmp_rep = $tmp_rep + $replacements;
+      }
+
+      // delete old additional data
+      $query->clear()
+            ->delete(_JOOM_TABLE_IMAGE_DETAILS)
+            ->where('id = '.(int) $id)
+            ->where('details_key LIKE '.$db->q('additional.%'));
+      $db->setQuery($query);
+
+      if(!$db->query())
+      {
+        throw new Exception($db->getErrorMsg());
+      }
+
+      // insert new additional data
       if(count($tuples))
       {
         $query->clear()
@@ -319,6 +458,27 @@ class plgJoomGalleryJoomAdditionalImageFields extends JPlugin
   }
 
   /**
+   * onJoomAfterPrepareDisplayHTML event
+   * Method is called at the end of the view method (view.html.php)
+   *
+   * Important Note: Please push the additional data into $itemObj->additionalData
+   *
+   * @param   string  $viewType  View variable
+   * @param   object  $itemObj   Item data of the image/category displayed
+   * @return  bool    True on success, false otherwise
+   * @since   1.0
+   */
+  public function onJoomAfterPrepareDisplayHTML($viewType, $itemObj)
+  {
+    if($viewType == 'detail')
+    {
+      $itemObj->additionalData['AdditionalImageFields'] = $this->getAdditionalData($itemObj, null);
+    }
+
+    return true;
+  }
+
+  /**
    * Internal method for retrieving and formatting additional data
    * for output in frontend
    *
@@ -367,26 +527,34 @@ class plgJoomGalleryJoomAdditionalImageFields extends JPlugin
       $k = str_replace('additional.', '', $result[0]);
       if($field = $form->getField($k, 'additional'))
       {
-        switch($field->type)
+        if(empty($separator))
         {
+          $data = array('label'=>$field->getAttribute('label'), 'value'=>$result[1]);
+          $fields[$k] = (object)$data;
+        }
+        else
+        {
+          switch($field->type)
+          {
 
-          // Create behavior for each field type
+            // Create behavior for each field type
 
-          case 'text':
-          default:
-            if(strlen($result[1]) > 0)
-            {
-              $key  = 'PLG_JOOMADDITIONALIMAGEFIELDS_FIELD_'.strtoupper($k).'_VAR';
-              if(JFactory::getLanguage()->hasKey($key))
+            case 'text':
+            default:
+              if(strlen($result[1]) > 0)
               {
-                $fields[] = JText::sprintf($key, $result[1]);
+                $key  = 'PLG_JOOMADDITIONALIMAGEFIELDS_FIELD_'.strtoupper($k).'_VAR';
+                if(JFactory::getLanguage()->hasKey($key))
+                {
+                  $fields[] = JText::sprintf($key, $result[1]);
+                }
+                else
+                {
+                  $fields[] = sprintf($separator, $field->title, $result[1]);
+                }
               }
-              else
-              {
-                $fields[] = sprintf($separator, $field->title, $result[1]);
-              }
-            }
-            break;
+              break;
+          }
         }
       }
     }
@@ -396,7 +564,14 @@ class plgJoomGalleryJoomAdditionalImageFields extends JPlugin
       return false;
     }
 
-    return $fields;
+    if(empty($separator))
+    {
+      return (object)$fields;
+    }
+    else
+    {
+      return $fields;
+    }
   }
 
   /**
