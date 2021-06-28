@@ -463,16 +463,17 @@ class plgJoomGalleryJoomAdditionalImageFields extends JPlugin
    *
    * Important Note: Please push the additional data into $itemObj->additionalData
    *
-   * @param   string  $viewType  View variable
-   * @param   object  $itemObj   Item data of the image/category displayed
+   * @param   string   $viewType  View variable
+   * @param   integer  $id   id of the item
+   * @param   array    $addData array with the additional data
    * @return  bool    True on success, false otherwise
    * @since   1.0
    */
-  public function onJoomAfterPrepareDisplayHTML($viewType, $itemObj)
+  public function onJoomAfterPrepareDisplayHTML($viewType, $id, &$addData)
   {
-    if($viewType == 'detail')
+    if($viewType == 'detail.image')
     {
-      $itemObj->additionalData['AdditionalImageFields'] = $this->getAdditionalData($itemObj, null);
+      $addData['AdditionalImageFields'] = $this->getAdditionalData($id, null);
     }
 
     return true;
