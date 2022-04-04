@@ -195,7 +195,9 @@ class plgJoomGalleryJoomAdditionalImageFields extends JPlugin
    */
   public function onContentAfterSave($context, &$table, $isNew)
   {
-    if(!isset($table->id) || !$table->id || $context != _JOOM_OPTION.'.image')
+    $task = JFactory::getApplication()->input->get('task');
+
+    if(!isset($table->id) || !$table->id || $context != _JOOM_OPTION.'.image' || $task == 'move')
     {
       return;
     }
